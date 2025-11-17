@@ -126,10 +126,10 @@ sudo chown -R 10001:10001 loki-data
 sudo chown -R 472:472 grafana-data
 
 # Start services
-docker-compose up -d
+docker compose up -d
 
 # Check status
-docker-compose ps
+docker compose ps
 ```
 
 ### Step 5: Configure Firewall
@@ -249,10 +249,10 @@ services:
 mkdir -p alloy_data
 
 # Start Alloy
-docker-compose up -d
+docker compose up -d
 
 # Check logs
-docker-compose logs -f alloy
+docker compose logs -f alloy
 ```
 
 ### Step 5: Verify Connection
@@ -314,7 +314,7 @@ sudo chown -R 10001:10001 loki-data
 sudo chown -R 472:472 grafana-data
 sudo ufw allow 3100/tcp
 sudo ufw allow 3000/tcp
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Remote Servers (192.168.1.101, 102, ...)
@@ -322,7 +322,7 @@ docker-compose up -d
 cd /opt/alloy
 # Edit alloy-config.alloy - set central server IP
 mkdir -p alloy_data
-docker-compose up -d
+docker compose up -d
 ```
 
 ---
@@ -386,5 +386,9 @@ sudo ufw status | grep 3100
 
 1. Copy Alloy setup to new server
 2. Edit `alloy-config.alloy` - set correct central server IP
+<<<<<<< HEAD
 3. Run `docker-compose up -d`
+4. Logs appear automatically in Grafana
+=======
+3. Run `docker compose up -d`
 4. Logs appear automatically in Grafana
