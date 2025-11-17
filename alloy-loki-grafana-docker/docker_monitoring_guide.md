@@ -61,24 +61,18 @@ schema_config:
       object_store: filesystem
       schema: v13
       index:
-        prefix: index_
+        prefix: loki_index_
         period: 24h
 
 storage_config:
-  tsdb_shipper:
-    active_index_directory: /loki/tsdb-index
-    cache_location: /loki/tsdb-cache
+  filesystem:
+    directory: /loki
 
 limits_config:
   retention_period: 168h
   reject_old_samples: true
   reject_old_samples_max_age: 168h
 
-compactor:
-  working_directory: /loki/compactor
-  compaction_interval: 10m
-  retention_enabled: true
-  retention_delete_delay: 2h
 ```
 
 ### Step 3: Create Docker Compose
@@ -86,7 +80,6 @@ compactor:
 Create `docker-compose.yml`:
 
 ```yaml
-version: "3.9"
 
 networks:
   monitoring:
@@ -94,7 +87,7 @@ networks:
 
 services:
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:3.5
     container_name: loki
     restart: unless-stopped
     user: "10001:10001"
