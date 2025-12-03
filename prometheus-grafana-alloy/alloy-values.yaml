@@ -1,0 +1,86 @@
+controller:
+  type: daemonset  # Required to run on every node for logs and node metrics
+
+alloy:
+  config: |
+    /****************************************************************
+     * 1. METRICS PIPELINE (Node Exporter Replacement)
+     ****************************************************************/
+    
+    // Generate metrics from the local node (CPU, memory, disk, etc.)
+    prometheus.exporter.unix "node_metrics" {
+      include_exporter_metrics = true
+    }
+
+    // Scrape the metrics generated above
+    prometheus.scrape "scrape_node" {
+      targets    = prometheus.exporter.unix.node_metrics.targets
+      forward_to = [prometheus.remote_write.internal_prometheus.receiver]
+      job_name   = "node-exporter"
+      scrape_interval = "15s"
+    }
+
+    // Push metrics to your INTERNAL Prometheus Service
+    // URL format: http://<service-name>.<namespace>.svc:9090/api/v1/write
+    prometheus.remote_write "internal_prometheus" {
+      endpoint {
+        url = "http://kube-prometheus-stack-prometheus.monitoring.svc:9090/api/v1/write"
+      }
+    }
+
+    /****************************************************************
+     * 2. LOGS PIPELINE (Promtail Replacement)
+     ****************************************************************/
+    
+    // Discover pods to get metadata
+    discovery.kubernetes "pods" {
+      role = "pod"
+    }
+
+    // Process discovery to find logs on the specific node running this Alloy pod
+    discovery.relabel "pod_logs" {
+      targets = discovery.kubernetes.pods.targets
+
+      // 1. Only keep pods running on the same node as this Alloy instance
+      rule {
+        source_labels = ["__meta_kubernetes_pod_node_name"]
+        target_label  = "__host__"
+        action        = "keep"
+      }
+
+      // 2. Add Namespace, Pod, and Container labels to the logs
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_name"]
+        target_label  = "container"
+      }
+
+      // 3. Construct the actual log file path on the node (/var/log/pods/...)
+      rule {
+        source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
+        target_label  = "__path__"
+        separator     = "/"
+        replacement   = "/var/log/pods/*$1/*.log"
+      }
+    }
+
+    // Read the log files
+    loki.source.file "pod_logs_read" {
+      targets    = discovery.relabel.pod_logs.output
+      forward_to = [loki.write.external_loki.receiver]
+    }
+
+    // Push logs to your EXTERNAL Loki server
+    loki.write "external_loki" {
+      endpoint {
+        url = "http://192.168.56.31:3100/loki/api/v1/push"
+      }
+    }
+

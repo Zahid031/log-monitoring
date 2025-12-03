@@ -1,0 +1,28 @@
+nodeExporter:
+  enabled: false
+
+promtail:
+  enabled: false
+
+# 2. Configure Grafana
+grafana:
+  # Set the admin password
+  adminPassword: "admin123"
+  
+  # Expose Grafana via LoadBalancer
+  service:
+    type: LoadBalancer
+
+# 3. Enable Remote Write Receiver
+# This allows Alloy to PUSH metrics to this Prometheus
+prometheus:
+  prometheusSpec:
+    enableRemoteWriteReceiver: true
+
+# 4. Standard settings
+kubelet:
+  serviceMonitor:
+    scrape: true
+
+blackboxExporter:
+  enabled: false
