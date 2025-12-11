@@ -21,40 +21,56 @@ Create `alloy-values.yaml`:
 alloy:
   configMap:
     content: |
+      // 1. LOGS COLLECTION (Kubernetes Pods)
+      // ==========================================
+      // Step A: Discover Kubernetes pods
       discovery.kubernetes "pods" {
         role = "pod"
       }
-      
+
+      // Step B: Relabel to get clean pod information
       discovery.relabel "kubernetes_pods" {
         targets = discovery.kubernetes.pods.targets
-        
+
+        // Keep only running pods
         rule {
           source_labels = ["__meta_kubernetes_pod_phase"]
           regex         = "Pending|Succeeded|Failed|Completed"
           action        = "drop"
         }
-        
+
+        // Add namespace label
         rule {
           source_labels = ["__meta_kubernetes_namespace"]
           target_label  = "namespace"
         }
-        
+
+        // Add pod name label
         rule {
           source_labels = ["__meta_kubernetes_pod_name"]
           target_label  = "pod"
         }
-        
+
+        // Add container name label
         rule {
           source_labels = ["__meta_kubernetes_pod_container_name"]
           target_label  = "container"
         }
+
+        // Add node name label
+        rule {
+          source_labels = ["__meta_kubernetes_pod_node_name"]
+          target_label  = "node"
+        }
       }
-      
+
+      // Step C: Scrape pod logs
       loki.source.kubernetes "pods" {
         targets    = discovery.relabel.kubernetes_pods.output
         forward_to = [loki.write.remote.receiver]
       }
-      
+
+      // Step D: Push logs to remote Loki server
       loki.write "remote" {
         endpoint {
           url = "http://192.168.56.6:3100/loki/api/v1/push"
@@ -69,6 +85,16 @@ rbac:
 
 serviceAccount:
   create: true
+
+# Add service configuration with required ports
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    - name: http-metrics
+      port: 12345
+      targetPort: 12345
+      protocol: TCP
 ```
 
 **Important**: Change the Loki URL (`http://192.168.56.6:3100`) to your actual Loki server address.
