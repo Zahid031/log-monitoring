@@ -1,0 +1,12 @@
+services:
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.80.1
+    container_name: redis_exporter
+    restart: unless-stopped
+    ports:
+      - "9121:9121"
+    command:
+      - "--redis.addr=redis://192.168.169.47:6380"
+      - "--redis.password=${REDIS_PASSWORD}"
+      - "--is-cluster"
+
